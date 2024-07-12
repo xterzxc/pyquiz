@@ -1,48 +1,72 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <title>Chat Room</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Room</title>
 </head>
 <body>
-    <textarea id="chat-log" cols="100" rows="20"></textarea><br>
-    <input id="chat-message-input" type="text" size="100"><br>
-    <input id="chat-message-submit" type="button" value="Send">
-    {{ room_name|json_script:"room-name" }}
+    <h1>Game Room: {{ room_name }}</h1>
+    <div id="players-container">
+        <h2>Players:</h2>
+        <ul id="players-list">
+            {% for player in players %}
+                <li>{{ player.name }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div id="question-container" style="display:none;">
+        <h2 id="question-text"></h2>
+        <textarea id="answer-code" placeholder="Write your code here..."></textarea>
+        <button id="submit-answer">Submit Answer</button>
+    </div>
+    <div id="results-container" style="display:none;">
+        <h2 id="result-message"></h2>
+    </div>
+
     <script>
-        const roomName = JSON.parse(document.getElementById('room-name').textContent);
+        const roomName = '{{ room_name }}';
+        const playerName = new URLSearchParams(window.location.search).get('player');
+        const socket = new WebSocket(`ws://${window.location.host}/ws/game/${roomName}/`);
 
-        const chatSocket = new WebSocket(
-            'ws://'
-            + window.location.host
-            + '/ws/game/'
-            + roomName
-            + '/'
-        );
+        socket.onopen = function(e) {
+            socket.send(JSON.stringify({
+                'type': 'join_room',
+                'player_name': playerName
+            }));
+        };
 
-        chatSocket.onmessage = function(e) {
+        socket.onmessage = function(e) {
             const data = JSON.parse(e.data);
-            document.querySelector('#chat-log').value += (data.message + '\n');
-        };
 
-        chatSocket.onclose = function(e) {
-            console.error('Chat socket closed unexpectedly');
-        };
-
-        document.querySelector('#chat-message-input').focus();
-        document.querySelector('#chat-message-input').onkeyup = function(e) {
-            if (e.key === 'Enter') {  // enter, return
-                document.querySelector('#chat-message-submit').click();
+            if (data.type === 'update_players') {
+                const playersList = document.getElementById('players-list');
+                playersList.innerHTML = '';
+                data.players.forEach(player => {
+                    const li = document.createElement('li');
+                    li.textContent = player;
+                    playersList.appendChild(li);
+                });
+            } else if (data.type === 'new_question') {
+                document.getElementById('question-container').style.display = 'block';
+                document.getElementById('results-container').style.display = 'none';
+                document.getElementById('question-text').innerText = data.text;
+            } else if (data.type === 'answer_result') {
+                document.getElementById('question-container').style.display = 'none';
+                document.getElementById('results-container').style.display = 'block';
+                document.getElementById('result-message').innerText = data.correct ? 'Correct!' : 'Incorrect!';
             }
         };
 
-        document.querySelector('#chat-message-submit').onclick = function(e) {
-            const messageInputDom = document.querySelector('#chat-message-input');
-            const message = messageInputDom.value;
-            chatSocket.send(JSON.stringify({
-                'message': message
+        document.getElementById('submit-answer').onclick = function() {
+            const code = document.getElementById('answer-code').value;
+            socket.send(JSON.stringify({
+                'type': 'submit_answer',
+                'player_name': playerName,
+                'code': code,
+                'question_id': 1
             }));
-            messageInputDom.value = '';
         };
     </script>
 </body>
+</html>

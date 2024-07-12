@@ -1,25 +1,58 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <title>Chat Rooms</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join or Create Game</title>
 </head>
 <body>
-    What chat room would you like to enter?<br>
-    <input id="room-name-input" type="text" size="100"><br>
-    <input id="room-name-submit" type="button" value="Enter">
+    <h1>Create or Join Game</h1>
+    
+    <h2>Create Room</h2>
+    <form id="create-room-form" method="post">
+        {% csrf_token %}
+        <input type="text" id="create-room-name" name="name" placeholder="Room Name" required>
+        <input type="text" id="create-host-name" name="host" placeholder="Host Name" required>
+        <button type="submit">Create Room</button>
+    </form>
+
+    <h2>Join Room</h2>
+    <form id="join-room-form">
+        <input type="text" id="room-name" placeholder="Room Name" required>
+        <input type="text" id="player-name" placeholder="Your Name" required>
+        <button type="submit">Join Room</button>
+    </form>
 
     <script>
-        document.querySelector('#room-name-input').focus();
-        document.querySelector('#room-name-input').onkeyup = function(e) {
-            if (e.key === 'Enter') { 
-                document.querySelector('#room-name-submit').click();
-            }
+        document.getElementById('join-room-form').onsubmit = function(event) {
+            event.preventDefault();
+            const roomName = document.getElementById('room-name').value;
+            const playerName = document.getElementById('player-name').value;
+            window.location.href = `/game/${roomName}?player=${playerName}`;
         };
 
-        document.querySelector('#room-name-submit').onclick = function(e) {
-            var roomName = document.querySelector('#room-name-input').value;
-            window.location.pathname = roomName;
+        document.getElementById('create-room-form').onsubmit = async function(event) {
+            event.preventDefault();
+            const roomName = document.getElementById('create-room-name').value;
+            const hostName = document.getElementById('create-host-name').value;
+            
+            const response = await fetch('/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    name: roomName,
+                    host: hostName
+                })
+            });
+
+            if (response.ok) {
+                window.location.href = `/game/${roomName}?player=${hostName}`;
+            } else {
+                alert('Error creating room');
+            }
         };
     </script>
 </body>

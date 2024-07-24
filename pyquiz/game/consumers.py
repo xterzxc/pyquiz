@@ -40,6 +40,8 @@ class GameConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         if data['type'] == 'join_room':
             await self.handle_join_room(data)
+        elif data['type'] == 'start_game':
+            await self.handle_start_game()
 
     async def handle_join_room(self, data):
         self.player_name = data['player_name']
@@ -61,4 +63,25 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'update_players',
             'players': players
+        }))
+
+    async def handle_start_game(self):
+        room = await sync_to_async(Room.objects.get)(name=self.room_name)
+
+        room.active = True
+        await sync_to_async(room.save)()
+
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'game_started',
+                'message': 'The game has started!'
+            }
+        )
+    
+    async def game_started(self, event):
+        message = event['message']
+        await self.send(text_data=json.dumps({
+            'type': 'game_started',
+            'message': message
         }))

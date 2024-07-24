@@ -36,22 +36,28 @@
             const roomName = document.getElementById('create-room-name').value;
             const hostName = document.getElementById('create-host-name').value;
             
-            const response = await fetch('/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify({
-                    name: roomName,
-                    host: hostName
-                })
-            });
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        name: roomName,
+                        host: hostName
+                    })
+                });
 
-            if (response.ok) {
-                window.location.href = `/game/${roomName}?player=${hostName}`;
-            } else {
-                alert('Error creating room');
+                if (response.ok) {
+                    window.location.href = `/game/${roomName}?player=${hostName}`;
+                } else {
+                    const result = await response.json();
+                    alert(result.error || 'Error creating room');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An unexpected error occurred');
             }
         };
     </script>

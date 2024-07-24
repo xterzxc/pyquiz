@@ -1,14 +1,19 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Room</title>
+    <script src="{% static 'game.js' %}"></script>
 </head>
 <body>
-    <h1>Game Room: {{ room_name }}</h1>
-    <div id="players-container">
+    <div id="lobby-container">
+        <h1>Game Room: {{ room_name }}</h1>
+        <button id="start-game">Start Game</button>
         <h2>Players:</h2>
+    </div>
+    <div id="players-container">
         <ul id="players-list">
             {% for player in players %}
                 <li>{{ player.name }}</li>
@@ -24,49 +29,6 @@
         <h2 id="result-message"></h2>
     </div>
 
-    <script>
-        const roomName = '{{ room_name }}';
-        const playerName = new URLSearchParams(window.location.search).get('player');
-        const socket = new WebSocket(`ws://${window.location.host}/ws/game/${roomName}/`);
-
-        socket.onopen = function(e) {
-            socket.send(JSON.stringify({
-                'type': 'join_room',
-                'player_name': playerName
-            }));
-        };
-
-        socket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-
-            if (data.type === 'update_players') {
-                const playersList = document.getElementById('players-list');
-                playersList.innerHTML = '';
-                data.players.forEach(player => {
-                    const li = document.createElement('li');
-                    li.textContent = player;
-                    playersList.appendChild(li);
-                });
-            } else if (data.type === 'new_question') {
-                document.getElementById('question-container').style.display = 'block';
-                document.getElementById('results-container').style.display = 'none';
-                document.getElementById('question-text').innerText = data.text;
-            } else if (data.type === 'answer_result') {
-                document.getElementById('question-container').style.display = 'none';
-                document.getElementById('results-container').style.display = 'block';
-                document.getElementById('result-message').innerText = data.correct ? 'Correct!' : 'Incorrect!';
-            }
-        };
-
-        document.getElementById('submit-answer').onclick = function() {
-            const code = document.getElementById('answer-code').value;
-            socket.send(JSON.stringify({
-                'type': 'submit_answer',
-                'player_name': playerName,
-                'code': code,
-                'question_id': 1
-            }));
-        };
-    </script>
+    <span id="room-name" data-room-name="{{ room_name }}"></span>
 </body>
 </html>
